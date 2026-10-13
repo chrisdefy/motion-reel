@@ -1,0 +1,1088 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root { color-scheme: light; }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<title>Motion Reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400..600&display=swap">
+<style>
+/* Layout: schlichte Seite mit einer immer dunklen Bühne (wie ein Bildschirm), darunter Steuerleiste und Bildunterschrift. */
+:root {
+  --font-display: "Bricolage Grotesque", "Arial Black", system-ui, sans-serif;
+  --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --bg: #f3f4fa;
+  --fg: #131629;
+  --muted: #585e78;
+  --line: #d6d9e8;
+  --accent: #3a4af0;
+
+  --stage-ink: #0d1020;
+  --stage-paper: #f1f2fa;
+  --c-blue: #4a5cff;
+  --c-pink: #ff5fa8;
+  --c-amber: #ffb53d;
+  --c-mint: #4fe3c1;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a0c16; --fg: #eceffa; --muted: #9aa1bd; --line: #262a40; --accent: #8794ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a0c16; --fg: #eceffa; --muted: #9aa1bd; --line: #262a40; --accent: #8794ff;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  padding-inline: 16px;
+  padding-block: 32px 56px;
+}
+.page { max-width: 1040px; margin-inline: auto; display: grid; gap: 28px; }
+.head { display: grid; gap: 12px; }
+h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2.3rem, 6.5vw, 4.2rem);
+  line-height: 1;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.lede { margin: 0; max-width: 58ch; color: var(--muted); font-size: 1.06rem; text-wrap: pretty; }
+
+.stage {
+  aspect-ratio: 16 / 9;
+  background: var(--stage-ink);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: pan-y; }
+@media (max-width: 640px) { .stage { aspect-ratio: 4 / 5; } }
+
+.bar { display: flex; gap: 10px; margin-top: 12px; align-items: stretch; }
+.play, .chip {
+  font-family: var(--font-mono);
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.play:hover, .chip:hover { border-color: var(--muted); }
+.play:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.play { flex: none; width: 46px; display: grid; place-items: center; }
+.play svg { width: 16px; height: 16px; fill: currentColor; }
+.play.snd { width: auto; padding-inline: 14px; display: flex; align-items: center; gap: 8px; font-size: 13px; letter-spacing: 0.02em; white-space: nowrap; }
+.play.snd[aria-pressed="true"] { border-color: var(--fg); }
+.play.snd[aria-pressed="false"] .waves { opacity: 0.3; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.chip {
+  position: relative;
+  overflow: hidden;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  padding: 11px 14px;
+}
+.chip::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  background: var(--accent);
+  transform: scaleX(var(--p, 0));
+  transform-origin: left;
+}
+.chip.on { border-color: var(--fg); }
+
+.caption { display: grid; gap: 8px; max-width: 68ch; min-height: 9.5rem; }
+.caption h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.6rem;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.caption p { margin: 0; color: var(--muted); text-wrap: pretty; }
+.hint { margin: 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: 0.02em; }
+@media (hover: none) { .hint { display: none; } }
+</style>
+
+</head>
+<body>
+<main class="page">
+  <header class="head">
+    <h1>Motion Reel</h1>
+    <p class="lede">Fünf Szenen, live im Browser gerechnet. Die Bewegung entsteht als Code auf deinem Gerät und läuft ohne Videodatei. Mit dem Lautsprecher-Button schaltest du den Ton dazu, der ebenfalls live erzeugt wird.</p>
+  </header>
+
+  <section aria-label="Animation">
+    <div class="stage" id="stage">
+      <canvas id="cv" role="img" aria-label="Animierte Szenen: Typografie, Strömungsfeld, Formwandel, Timing-Kurven und eine selbstzeichnende Linie"></canvas>
+    </div>
+    <div class="bar">
+      <button class="play" id="play" type="button" aria-label="Pause">
+        <svg id="ico-pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="1.5" width="4.2" height="13" rx="1"/><rect x="9.8" y="1.5" width="4.2" height="13" rx="1"/></svg>
+        <svg id="ico-play" viewBox="0 0 16 16" aria-hidden="true" hidden><path d="M3.5 1.8v12.4a.8.8 0 0 0 1.2.7l9.6-6.2a.8.8 0 0 0 0-1.4L4.7 1.1a.8.8 0 0 0-1.2.7z"/></svg>
+      </button>
+      <button class="play snd" id="snd" type="button" aria-pressed="false" aria-label="Ton einschalten">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h2.6L8 3v10L4.6 10H2z"/><g class="waves" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M10.4 5.6a3.4 3.4 0 0 1 0 4.8"/><path d="M12.2 3.8a6 6 0 0 1 0 8.4"/></g></svg>
+        <span id="snd-label">Ton aus</span>
+      </button>
+      <div class="chips" id="chips"></div>
+    </div>
+  </section>
+
+  <section class="caption" aria-live="polite">
+    <h2 id="cap-title">Typografie in Bewegung</h2>
+    <p id="cap-text">Jeder Buchstabe steigt einzeln aus einer Maske auf, versetzt um wenige Hundertstel Sekunden. Dahinter wischen Farbflächen durchs Bild. Die Kurve heißt easeOutExpo: schneller Start, weiches Ausklingen.</p>
+  </section>
+
+  <p class="hint">Leertaste: Start und Pause · Pfeiltasten: Szene wechseln</p>
+</main>
+
+<script>
+(() => {
+  const TAU = Math.PI * 2;
+  const $ = (s) => document.querySelector(s);
+
+  /* ---------- Farben aus den Tokens ---------- */
+  const cs = getComputedStyle(document.documentElement);
+  const hex = (n) => {
+    const v = parseInt(cs.getPropertyValue(n).trim().replace('#', ''), 16);
+    return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+  };
+  const INK = hex('--stage-ink');
+  const PAPER = hex('--stage-paper');
+  const PAL = [hex('--c-blue'), hex('--c-pink'), hex('--c-amber'), hex('--c-mint')];
+  const rgb = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+  const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const palAt = (u) => {
+    const n = PAL.length;
+    const x = (((u % 1) + 1) % 1) * n;
+    const i = Math.floor(x);
+    return mix(PAL[i % n], PAL[(i + 1) % n], x - i);
+  };
+  const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);
+
+  const FAM = '"Bricolage Grotesque","Arial Black",Impact,sans-serif';
+  const MONO = '"DM Mono",ui-monospace,Menlo,monospace';
+
+  /* ---------- Easing-Kurven ---------- */
+  const E = {
+    linear: (x) => x,
+    inOutQuad: (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2),
+    inOutCubic: (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2),
+    inCubic: (x) => x * x * x,
+    outCubic: (x) => 1 - Math.pow(1 - x, 3),
+    outExpo: (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x)),
+    outBack: (x) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); },
+    outElastic: (x) => (x <= 0 ? 0 : x >= 1 ? 1 : Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * (TAU / 3)) + 1),
+    outBounce: (x) => {
+      const n = 7.5625, d = 2.75;
+      if (x < 1 / d) return n * x * x;
+      if (x < 2 / d) return n * (x -= 1.5 / d) * x + 0.75;
+      if (x < 2.5 / d) return n * (x -= 2.25 / d) * x + 0.9375;
+      return n * (x -= 2.625 / d) * x + 0.984375;
+    },
+  };
+
+  /* ---------- Bühne ---------- */
+  const stage = $('#stage');
+  const cv = $('#cv');
+  const ctx = cv.getContext('2d');
+  let W = 1, H = 1, DPR = 1;
+  const pointer = { x: 0, y: 0, active: false };
+
+  const makeLayer = () => {
+    const c = document.createElement('canvas');
+    return { cv: c, g: c.getContext('2d') };
+  };
+
+  function spaced(g, text, x, y, sp, align) {
+    const chars = [...text];
+    const ws = chars.map((ch) => g.measureText(ch).width);
+    const tot = ws.reduce((a, b) => a + b, 0) + sp * (chars.length - 1);
+    let cx = align === 'center' ? x - tot / 2 : x;
+    chars.forEach((ch, i) => { g.fillText(ch, cx, y); cx += ws[i] + sp; });
+    return tot;
+  }
+
+  /* ===== Szene 1: Typografie ===== */
+  const typeCache = new Map();
+  function sceneType() {
+    const L = makeLayer(), g = L.g;
+    const words = [
+      { w: 'FORM', s: 0.3, panel: PAL[0], fg: PAPER },
+      { w: 'FARBE', s: 1.95, panel: PAL[1], fg: INK },
+      { w: 'TAKT', s: 3.6, panel: PAL[2], fg: INK },
+      { w: 'BEWEGUNG', s: 5.25, final: true },
+    ];
+    function lay(word) {
+      const key = word + '|' + W + '|' + H;
+      let c = typeCache.get(key);
+      if (c) return c;
+      g.font = `800 100px ${FAM}`;
+      const ws = [...word].map((ch) => g.measureText(ch).width);
+      const tot = ws.reduce((a, b) => a + b, 0);
+      const size = Math.min((100 * W * 0.84) / tot, W < H ? H * 0.22 : H * 0.38);
+      const k = size / 100;
+      c = { size, ws: ws.map((w) => w * k), tot: tot * k };
+      typeCache.set(key, c);
+      return c;
+    }
+    function drawWord(word, T, colorFn, exitAt) {
+      const m = lay(word), size = m.size, cap = size * 0.72;
+      const ox = (W - m.tot) / 2;
+      const base = H * 0.5 + cap / 2 - (exitAt == null ? size * 0.06 : 0);
+      g.save();
+      g.beginPath();
+      g.rect(ox - size * 0.1, base - cap * 1.12, m.tot + size * 0.2, cap * 1.12 + size * 0.1);
+      g.clip();
+      g.font = `800 ${size}px ${FAM}`;
+      g.textAlign = 'left';
+      g.textBaseline = 'alphabetic';
+      let x = ox;
+      [...word].forEach((ch, i) => {
+        const q = E.outExpo(clamp((T - 0.14 - i * 0.04) / 0.75));
+        const e = exitAt == null ? 0 : E.inCubic(clamp((T - exitAt - i * 0.025) / 0.35));
+        const y = base + (1 - q) * cap * 1.3 - e * cap * 1.3;
+        g.fillStyle = colorFn(i);
+        g.fillText(ch, x, y);
+        x += m.ws[i];
+      });
+      g.restore();
+      return { m, ox, base };
+    }
+    return {
+      cv: L.cv, g,
+      label: 'Typografie',
+      title: 'Typografie in Bewegung',
+      text: 'Jeder Buchstabe steigt einzeln aus einer Maske auf, versetzt um wenige Hundertstel Sekunden. Dahinter wischen Farbflächen durchs Bild. Die Kurve heißt easeOutExpo: schneller Start, weiches Ausklingen.',
+      draw(t) {
+        g.fillStyle = rgb(INK);
+        g.fillRect(0, 0, W, H);
+        for (const wd of words) {
+          const T = t - wd.s;
+          if (T < 0) continue;
+          if (!wd.final) {
+            const dur = 1.35;
+            if (T > dur + 0.5) continue;
+            const pin = E.inOutCubic(clamp(T / 0.5));
+            const pout = E.inOutCubic(clamp((T - dur + 0.1) / 0.5));
+            g.fillStyle = rgb(wd.panel);
+            g.fillRect(pout * W, 0, (pin - pout) * W + 1, H);
+            const col = rgb(wd.fg);
+            drawWord(wd.w, T, () => col, dur - 0.25);
+          } else {
+            const r = drawWord(wd.w, T, (i) => rgb(palAt((i / 8) * 0.75 + T * 0.07)), null);
+            const size = r.m.size;
+            const lp = E.outExpo(clamp((T - 0.95) / 1.1));
+            const ly = r.base + size * 0.17;
+            g.strokeStyle = rgb(PAPER, 0.9);
+            g.lineWidth = Math.max(2, size * 0.03);
+            g.lineCap = 'butt';
+            g.beginPath();
+            g.moveTo(r.ox, ly);
+            g.lineTo(r.ox + r.m.tot * lp, ly);
+            g.stroke();
+            const a = clamp((T - 1.4) / 0.6);
+            if (a > 0) {
+              const fs = Math.max(10, Math.min(14, W / 58));
+              g.font = `500 ${fs}px ${MONO}`;
+              g.textAlign = 'left';
+              g.fillStyle = rgb(PAPER, 0.72 * a);
+              spaced(g, 'FÜNF SZENEN · LIVE GERECHNET', r.ox, ly + fs * 2.4, fs * 0.22, 'left');
+            }
+          }
+        }
+      },
+    };
+  }
+
+  /* ===== Szene 2: Strömungsfeld ===== */
+  function sceneFlow() {
+    const L = makeLayer(), g = L.g;
+    let P = [], ft = 0;
+    const NC = PAL.length;
+    const fieldAng = (x, y, t) => {
+      const s = 1 / Math.min(W, H);
+      const nx = x * s, ny = y * s;
+      const a = Math.sin(nx * 5.1 + t * 0.35) * Math.cos(ny * 4.3 - t * 0.27)
+        + Math.sin((nx + ny) * 3.3 + t * 0.22) * 0.8
+        + Math.cos(nx * 9 - ny * 7 + t * 0.4) * 0.35;
+      return a * Math.PI * 1.1;
+    };
+    function seed() {
+      const n = clamp(Math.round((W * H) / 240), 500, 2000);
+      P = [];
+      for (let i = 0; i < n; i++) P.push({ x: Math.random() * W, y: Math.random() * H, vx: 0, vy: 0, c: i % NC, sp: 0.6 + Math.random() * 0.8 });
+    }
+    function rep(p, cx, cy, r, s, dt) {
+      const dx = p.x - cx, dy = p.y - cy, d2 = dx * dx + dy * dy;
+      if (d2 < r * r && d2 > 1) {
+        const d = Math.sqrt(d2), f = 1 - d / r;
+        p.vx += (dx / d) * f * f * s * dt;
+        p.vy += (dy / d) * f * f * s * dt;
+      }
+    }
+    function step(dt) {
+      const m = Math.min(W, H);
+      g.fillStyle = rgb(INK, Math.min(0.35, 1 - Math.exp(-dt * 2.6)));
+      g.fillRect(0, 0, W, H);
+      const gx = W * (0.5 + 0.3 * Math.cos(ft * 0.55));
+      const gy = H * (0.5 + 0.26 * Math.sin(ft * 0.8));
+      const rP = m * 0.2, rG = m * 0.14, sP = m * 9, base = m * 0.2;
+      const paths = PAL.map(() => new Path2D());
+      const k = Math.min(1, dt * 2.5);
+      for (const p of P) {
+        if (Math.random() < 0.003) { p.x = Math.random() * W; p.y = Math.random() * H; continue; }
+        const a = fieldAng(p.x, p.y, ft);
+        p.vx += (Math.cos(a) * base * p.sp - p.vx) * k;
+        p.vy += (Math.sin(a) * base * p.sp - p.vy) * k;
+        if (pointer.active) rep(p, pointer.x, pointer.y, rP, sP, dt);
+        rep(p, gx, gy, rG, sP * 0.7, dt);
+        const ox = p.x, oy = p.y;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        let wrapped = false;
+        if (p.x < 0) { p.x += W; wrapped = true; } else if (p.x > W) { p.x -= W; wrapped = true; }
+        if (p.y < 0) { p.y += H; wrapped = true; } else if (p.y > H) { p.y -= H; wrapped = true; }
+        if (wrapped) continue;
+        paths[p.c].moveTo(ox, oy);
+        paths[p.c].lineTo(p.x, p.y);
+      }
+      g.lineWidth = 1.4;
+      g.lineCap = 'round';
+      PAL.forEach((c, i) => { g.strokeStyle = rgb(c, 0.9); g.stroke(paths[i]); });
+    }
+    const self = {
+      cv: L.cv, g,
+      label: 'Strömung',
+      title: 'Strömungsfeld',
+      text() {
+        return `${P.length.toLocaleString('de-DE')} Partikel folgen einem Feld aus überlagerten Wellen und hinterlassen Spuren, die langsam verblassen. Fahr mit dem Zeiger über die Fläche: Die Partikel weichen aus.`;
+      },
+      reset() {
+        g.fillStyle = rgb(INK);
+        g.fillRect(0, 0, W, H);
+        seed();
+        ft = Math.random() * 10;
+        for (let i = 0; i < 110; i++) { ft += 1 / 60; step(1 / 60); }
+      },
+      resize() { self.reset(); },
+      draw(t, dt) {
+        if (dt === 0) return;
+        ft += dt;
+        step(dt);
+      },
+    };
+    return self;
+  }
+
+  /* ===== Szene 3: Formwandel ===== */
+  function sceneMorph() {
+    const L = makeLayer(), g = L.g;
+    const M = 180;
+    const poly = (n, th) => {
+      const a = TAU / n;
+      const u = (((th + Math.PI / 2) % a) + a) % a;
+      return Math.cos(Math.PI / n) / Math.cos(u - Math.PI / n);
+    };
+    const shapes = [
+      { name: 'KREIS', k: 1, f: () => 1 },
+      { name: 'QUADRAT', k: 1, f: (th) => 0.92 / Math.pow(Math.pow(Math.abs(Math.cos(th)), 5) + Math.pow(Math.abs(Math.sin(th)), 5), 1 / 5) },
+      { name: 'DREIECK', k: 1.3, f: (th) => poly(3, th) },
+      { name: 'STERN', k: 1, f: (th) => 0.45 + 0.62 * Math.pow((Math.cos(5 * (th + Math.PI / 2)) + 1) / 2, 1.5) },
+      { name: 'SECHSECK', k: 1.05, f: (th) => poly(6, th) },
+    ];
+    const NS = shapes.length;
+    let cx = 0, cy = 0;
+    function state(tau) {
+      const idx = Math.max(0, Math.floor(tau / 2));
+      const f = E.inOutCubic(clamp(tau - idx * 2 - 1));
+      return { a: shapes[idx % NS], b: shapes[(idx + 1) % NS], f };
+    }
+    function path(tau, sc, rot) {
+      const { a, b, f } = state(tau);
+      g.beginPath();
+      for (let i = 0; i <= M; i++) {
+        const th = (i / M) * TAU;
+        const r = (a.f(th) * a.k * (1 - f) + b.f(th) * b.k * f) * sc;
+        const x = cx + Math.cos(th + rot) * r, y = cy + Math.sin(th + rot) * r;
+        if (i) g.lineTo(x, y); else g.moveTo(x, y);
+      }
+      g.closePath();
+    }
+    return {
+      cv: L.cv, g,
+      label: 'Formwandel',
+      title: 'Formwandel',
+      text: 'Jede Form ist eine Funktion: Radius in Abhängigkeit vom Winkel. Zwischen zwei Formen wird Punkt für Punkt gemischt. Die Schatten dahinter laufen zeitversetzt nach und erzeugen den Sog.',
+      draw(t) {
+        g.fillStyle = rgb(INK);
+        g.fillRect(0, 0, W, H);
+        cx = W / 2;
+        cy = H * 0.46;
+        const R = Math.min(W, H) * 0.27 * (1 + 0.03 * Math.sin(t * 2.2));
+        g.strokeStyle = rgb(PAPER, 0.07);
+        g.lineWidth = 1;
+        g.beginPath();
+        g.moveTo(0, cy); g.lineTo(W, cy);
+        g.moveTo(cx, 0); g.lineTo(cx, H);
+        g.stroke();
+        g.lineJoin = 'round';
+        for (let k = 8; k >= 1; k--) {
+          const tau = t - k * 0.075;
+          path(tau, R * (1 + 0.05 * k), tau * 0.28);
+          g.strokeStyle = rgb(palAt((k / 8) * 0.5 + t * 0.05), 0.55 * (1 - k / 9));
+          g.lineWidth = 1.5;
+          g.stroke();
+        }
+        path(t, R, t * 0.28);
+        const gr = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+        gr.addColorStop(0, rgb(palAt(t * 0.06)));
+        gr.addColorStop(1, rgb(palAt(t * 0.06 + 0.4)));
+        g.fillStyle = gr;
+        g.fill();
+        for (let i = 0; i < 3; i++) {
+          const ang = t * (0.9 + i * 0.25) + i * 2.1;
+          const orr = R * 1.62;
+          g.fillStyle = rgb(PAL[(i + 1) % 4]);
+          g.beginPath();
+          g.arc(cx + Math.cos(ang) * orr, cy + Math.sin(ang) * orr * 0.9, Math.max(3, R * 0.045), 0, TAU);
+          g.fill();
+        }
+        const { a, b, f } = state(t);
+        const fs = Math.max(10, Math.min(13, W / 56));
+        g.font = `500 ${fs}px ${MONO}`;
+        g.textAlign = 'left';
+        g.textBaseline = 'alphabetic';
+        const ly = H - Math.max(18, H * 0.07);
+        g.fillStyle = rgb(PAPER, 0.75 * (1 - f));
+        spaced(g, a.name, W / 2, ly, fs * 0.28, 'center');
+        g.fillStyle = rgb(PAPER, 0.75 * f);
+        spaced(g, b.name, W / 2, ly, fs * 0.28, 'center');
+      },
+    };
+  }
+
+  /* ===== Szene 4: Timing ===== */
+  function sceneEase() {
+    const L = makeLayer(), g = L.g;
+    const rows = [
+      { n: 'linear', f: E.linear },
+      { n: 'inOutQuad', f: E.inOutQuad },
+      { n: 'outCubic', f: E.outCubic },
+      { n: 'outBack', f: E.outBack },
+      { n: 'outElastic', f: E.outElastic },
+      { n: 'outBounce', f: E.outBounce },
+    ];
+    const CYC = 3.4, FW = 1.3, HOLD = 0.4;
+    const leg = (t) => {
+      const c = ((t % CYC) + CYC) % CYC;
+      if (c < FW) return [c / FW, 1];
+      if (c < FW + HOLD) return [1, 1];
+      if (c < 2 * FW + HOLD) return [(c - FW - HOLD) / FW, -1];
+      return [1, -1];
+    };
+    return {
+      cv: L.cv, g,
+      label: 'Timing',
+      title: 'Dieselbe Strecke, sechs Kurven',
+      text: 'Alle sechs Kugeln legen in derselben Zeit denselben Weg zurück. Nur die Kurve unterscheidet sich, und sie bestimmt, ob eine Bewegung träge, federnd oder hart wirkt. Der lange Strich markiert das Ziel, manche Kurven schießen darüber hinaus.',
+      draw(t) {
+        g.fillStyle = rgb(INK);
+        g.fillRect(0, 0, W, H);
+        const pad = Math.max(16, W * 0.045);
+        const top = Math.max(18, H * 0.07);
+        const rh = (H - top * 2) / rows.length;
+        const wide = W >= 640;
+        const bw = wide ? Math.min(rh * 1.25, 96) : 0;
+        const bh = rh * 0.74;
+        const br = Math.min(rh * 0.19, 13);
+        const trackEnd = W - pad - (wide ? bw + 18 : 0);
+        const unit = (trackEnd - pad - 2 * br) / 1.8;
+        const x0 = pad + br + 0.38 * unit;
+        const fs = Math.max(10, Math.min(12.5, rh * 0.2));
+        rows.forEach((r, i) => {
+          const y0 = top + i * rh, ty = y0 + rh * 0.68, col = PAL[i % 4];
+          g.font = `400 ${fs}px ${MONO}`;
+          g.textAlign = 'left';
+          g.textBaseline = 'alphabetic';
+          g.fillStyle = rgb(PAPER, 0.62);
+          g.fillText(r.n, pad, y0 + rh * 0.34);
+          g.strokeStyle = rgb(PAPER, 0.14);
+          g.lineWidth = 1;
+          g.beginPath();
+          g.moveTo(x0 - 0.38 * unit, ty);
+          g.lineTo(x0 + 1.38 * unit, ty);
+          g.stroke();
+          g.strokeStyle = rgb(PAPER, 0.35);
+          g.beginPath();
+          g.moveTo(x0, ty - 5); g.lineTo(x0, ty + 5);
+          g.moveTo(x0 + unit, ty - 9); g.lineTo(x0 + unit, ty + 9);
+          g.stroke();
+          const pos = (tt) => { const [u, d] = leg(tt); const v = r.f(u); return d > 0 ? v : 1 - v; };
+          for (let k = 6; k >= 1; k--) {
+            g.fillStyle = rgb(col, 0.32 * (1 - k / 7));
+            g.beginPath();
+            g.arc(x0 + pos(t - k * 0.03) * unit, ty, br * (1 - k * 0.07), 0, TAU);
+            g.fill();
+          }
+          g.fillStyle = rgb(col);
+          g.beginPath();
+          g.arc(x0 + pos(t) * unit, ty, br, 0, TAU);
+          g.fill();
+          if (wide) {
+            const bx = W - pad - bw, by = y0 + (rh - bh) / 2;
+            const yy = (v) => by + bh * (1 - (v + 0.05) / 1.5);
+            g.strokeStyle = rgb(PAPER, 0.14);
+            g.lineWidth = 1;
+            g.strokeRect(bx, by, bw, bh);
+            g.beginPath();
+            g.moveTo(bx, yy(1)); g.lineTo(bx + bw, yy(1));
+            g.stroke();
+            g.strokeStyle = rgb(col, 0.85);
+            g.lineWidth = 1.5;
+            g.beginPath();
+            for (let j = 0; j <= 48; j++) {
+              const u = j / 48;
+              if (j) g.lineTo(bx + u * bw, yy(r.f(u))); else g.moveTo(bx + u * bw, yy(r.f(u)));
+            }
+            g.stroke();
+            const [u] = leg(t);
+            g.fillStyle = rgb(col);
+            g.beginPath();
+            g.arc(bx + u * bw, yy(r.f(u)), 3, 0, TAU);
+            g.fill();
+          }
+        });
+      },
+    };
+  }
+
+  /* ===== Szene 5: Zeichnung ===== */
+  function sceneDraw() {
+    const L = makeLayer(), g = L.g;
+    const TOT = 6 * Math.PI;
+    const cfg = [{ d: 4, rot: 0 }, { d: 2.6, rot: 0.45 }, { d: 5.2, rot: 0.9 }];
+    const PTS = 520, GRP = 6;
+    return {
+      cv: L.cv, g,
+      label: 'Zeichnung',
+      title: 'Selbstzeichnende Linien',
+      text: 'Drei Hypotrochoiden, also Kurven, wie ein Spirograph sie zieht, werden entlang eines Parameters gezeichnet und additiv überblendet. Wo sich Linien kreuzen, wird es heller. Der helle Punkt ist der Stift.',
+      draw(t) {
+        g.globalCompositeOperation = 'source-over';
+        g.fillStyle = rgb(INK);
+        g.fillRect(0, 0, W, H);
+        const P = E.inOutCubic(clamp((t - 0.4) / 4.8));
+        const smax = TOT * P;
+        const u0 = (Math.min(W, H) * 0.44) / 9.2;
+        if (P > 0.002) {
+          g.save();
+          g.translate(W / 2, H / 2);
+          g.rotate(t * 0.1);
+          g.globalCompositeOperation = 'lighter';
+          g.lineCap = 'round';
+          g.lineJoin = 'round';
+          g.lineWidth = Math.max(1.2, Math.min(W, H) * 0.0035);
+          cfg.forEach((c, ci) => {
+            const d = c.d * (1 + 0.07 * Math.sin(t * 1.1 + ci * 2));
+            const n = Math.max(2, Math.round(PTS * P));
+            const pt = (j) => {
+              const s = (j / PTS) * TOT;
+              return [(4 * Math.cos(s) + d * Math.cos((4 / 3) * s)) * u0, (4 * Math.sin(s) - d * Math.sin((4 / 3) * s)) * u0];
+            };
+            g.save();
+            g.rotate(c.rot);
+            for (let a = 0; a < n; a += GRP) {
+              g.beginPath();
+              for (let j = a; j <= Math.min(n, a + GRP); j++) {
+                const [x, y] = pt(j);
+                if (j === a) g.moveTo(x, y); else g.lineTo(x, y);
+              }
+              g.strokeStyle = rgb(palAt(a / PTS + t * 0.04 + ci * 0.12), 0.7);
+              g.stroke();
+            }
+            const [hx, hy] = pt(n);
+            const rg = g.createRadialGradient(hx, hy, 0, hx, hy, 12);
+            rg.addColorStop(0, rgb(PAPER, 0.9));
+            rg.addColorStop(1, rgb(PAPER, 0));
+            g.fillStyle = rg;
+            g.beginPath();
+            g.arc(hx, hy, 12, 0, TAU);
+            g.fill();
+            g.restore();
+          });
+          g.restore();
+        }
+        g.globalCompositeOperation = 'source-over';
+        const fs = Math.max(10, Math.min(12, W / 60));
+        g.font = `400 ${fs}px ${MONO}`;
+        g.textAlign = 'left';
+        g.textBaseline = 'alphabetic';
+        g.fillStyle = rgb(PAPER, 0.6);
+        const f2 = (v) => v.toFixed(2).replace('.', ',');
+        g.fillText(`PARAMETER s = ${f2(smax)} / ${f2(TOT)}`, Math.max(16, W * 0.045), H - Math.max(16, H * 0.06));
+      },
+    };
+  }
+
+  /* ---------- Ton (Web Audio, alles live erzeugt) ---------- */
+  const A = (() => {
+    let ctx = null, bus, send, master, pad = null, noise = null;
+    const mf = (m) => 440 * Math.pow(2, (m - 69) / 12);
+    const chords = [[50, 57, 60, 64], [46, 53, 57, 62], [43, 50, 53, 58], [41, 48, 57, 64], [45, 52, 57, 62]];
+    const pent = [62, 65, 67, 69, 72, 74, 77, 79];
+    function init() {
+      if (ctx) return true;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      ctx = new AC();
+      master = ctx.createGain();
+      master.gain.value = 0;
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -18;
+      comp.ratio.value = 4;
+      master.connect(comp);
+      comp.connect(ctx.destination);
+      bus = ctx.createGain();
+      bus.connect(master);
+      send = ctx.createGain();
+      const conv = ctx.createConvolver();
+      const len = Math.floor(ctx.sampleRate * 2.4);
+      const imp = ctx.createBuffer(2, len, ctx.sampleRate);
+      for (let c = 0; c < 2; c++) {
+        const d = imp.getChannelData(c);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
+      }
+      conv.buffer = imp;
+      const rv = ctx.createGain();
+      rv.gain.value = 0.55;
+      send.connect(conv);
+      conv.connect(rv);
+      rv.connect(master);
+      noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      const nd = noise.getChannelData(0);
+      for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+      return true;
+    }
+    function out(node, pan, rev) {
+      let n = node;
+      if (pan && ctx.createStereoPanner) {
+        const p = ctx.createStereoPanner();
+        p.pan.value = pan;
+        n.connect(p);
+        n = p;
+      }
+      n.connect(bus);
+      if (rev > 0) {
+        const s = ctx.createGain();
+        s.gain.value = rev;
+        n.connect(s);
+        s.connect(send);
+      }
+    }
+    function tone(freq, o = {}) {
+      if (!ctx) return;
+      const { type = 'sine', t = 0, dur = 0.5, gain = 0.1, atk = 0.005, pan = 0, rev = 0.3, lp = 0, to = 0 } = o;
+      const t0 = ctx.currentTime + t;
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t0);
+      if (to) osc.frequency.exponentialRampToValueAtTime(to, t0 + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain, t0 + atk);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      if (lp) {
+        const f = ctx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.value = lp;
+        osc.connect(f);
+        f.connect(g);
+      } else osc.connect(g);
+      out(g, pan, rev);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.05);
+    }
+    const pluck = (m, o = {}) => tone(mf(m), { type: 'triangle', dur: 0.5, gain: 0.09, atk: 0.003, lp: 3400, rev: 0.35, ...o });
+    const bell = (m, o = {}) => {
+      const f = mf(m);
+      tone(f, { dur: 1.8, gain: 0.07, rev: 0.6, ...o });
+      tone(f * 2.01, { dur: 1.2, gain: 0.025, rev: 0.6, ...o });
+      tone(f * 3.01, { dur: 0.7, gain: 0.012, rev: 0.6, ...o });
+    };
+    function whoosh(dur = 0.9, gain = 0.12) {
+      if (!ctx) return;
+      const t0 = ctx.currentTime;
+      const src = ctx.createBufferSource();
+      src.buffer = noise;
+      src.loop = true;
+      const f = ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.Q.value = 1.4;
+      f.frequency.setValueAtTime(260, t0);
+      f.frequency.exponentialRampToValueAtTime(5200, t0 + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain, t0 + dur * 0.8);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur * 1.1);
+      src.connect(f);
+      f.connect(g);
+      out(g, 0, 0.4);
+      src.start(t0);
+      src.stop(t0 + dur * 1.2);
+    }
+    const boom = () => tone(110, { dur: 1.1, gain: 0.32, atk: 0.004, to: 40, rev: 0.25 });
+    const kick = (g = 0.16) => tone(150, { dur: 0.22, gain: g, atk: 0.002, to: 46, rev: 0 });
+    function hat(g = 0.025) {
+      if (!ctx) return;
+      const t0 = ctx.currentTime;
+      const src = ctx.createBufferSource();
+      src.buffer = noise;
+      const f = ctx.createBiquadFilter();
+      f.type = 'highpass';
+      f.frequency.value = 8000;
+      const gn = ctx.createGain();
+      gn.gain.setValueAtTime(g, t0);
+      gn.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.05);
+      src.connect(f);
+      f.connect(gn);
+      out(gn, 0, 0.1);
+      src.start(t0, Math.random());
+      src.stop(t0 + 0.06);
+    }
+    function stopPad(fade = 1.6) {
+      if (!pad || !ctx) return;
+      const p = pad;
+      pad = null;
+      const now = ctx.currentTime;
+      p.g.gain.cancelScheduledValues(now);
+      p.g.gain.setValueAtTime(p.g.gain.value, now);
+      p.g.gain.linearRampToValueAtTime(0, now + fade);
+      setTimeout(() => {
+        p.oscs.forEach((o) => { try { o.stop(); } catch (e) { /* schon gestoppt */ } });
+        p.g.disconnect();
+      }, fade * 1000 + 100);
+    }
+    function setPad(k) {
+      if (!ctx) return;
+      stopPad();
+      const now = ctx.currentTime;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, now);
+      g.gain.linearRampToValueAtTime(0.2, now + 1.8);
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 850;
+      lp.Q.value = 0.7;
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 0.1 + k * 0.025;
+      const lg = ctx.createGain();
+      lg.gain.value = 320;
+      lfo.connect(lg);
+      lg.connect(lp.frequency);
+      const oscs = [lfo];
+      chords[k].forEach((m) => [-8, 8].forEach((d) => {
+        const o = ctx.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.value = mf(m);
+        o.detune.value = d;
+        const v = ctx.createGain();
+        v.gain.value = 0.085;
+        o.connect(v);
+        v.connect(lp);
+        o.start();
+        oscs.push(o);
+      }));
+      lfo.start();
+      lp.connect(g);
+      out(g, 0, 0.5);
+      pad = { g, oscs };
+    }
+    return {
+      init, mf, pent, tone, pluck, bell, whoosh, boom, kick, hat, setPad, stopPad,
+      get ready() { return !!ctx; },
+      resume() { if (ctx && ctx.state === 'suspended') ctx.resume(); },
+      level(on) { if (ctx) master.gain.setTargetAtTime(on ? 0.8 : 0, ctx.currentTime, 0.08); },
+    };
+  })();
+
+  /* Töne pro Szene, an die lokale Szenenzeit gebunden (gleiche Zeiten wie in den Animationen) */
+  const P5 = A.pent;
+  const cues = (() => {
+    const base = [{ t: 0, fn: () => A.whoosh(0.9, 0.11) }, { t: 0.9, fn: () => A.boom() }];
+    const s0 = [];
+    [[0.3, 4], [1.95, 5], [3.6, 4], [5.25, 8]].forEach(([s, n], wi) => {
+      s0.push({ t: s, fn: () => A.whoosh(0.45, 0.07) });
+      for (let j = 0; j < n; j++) {
+        s0.push({ t: s + 0.14 + j * 0.04, fn: () => A.pluck(P5[(wi * 2 + j) % P5.length], { pan: (j / n - 0.5) * 0.8 }) });
+      }
+    });
+    s0.push({ t: 6.0, fn: () => { A.bell(62); A.bell(69, { t: 0.08 }); A.bell(74, { t: 0.16 }); } });
+    const s1 = [];
+    for (let i = 0; i < 15; i++) {
+      s1.push({ t: 0.6 + i * 0.5, fn: () => A.pluck(P5[(i * 3 + (i >> 2)) % 8], { rev: 0.65, gain: 0.07, dur: 0.7, pan: Math.sin(i) * 0.6 }) });
+    }
+    const s2 = [];
+    for (let i = 0; i < 4; i++) {
+      s2.push({ t: 1 + 2 * i, fn: () => A.tone(A.mf(P5[i % 8] - 12), { type: 'triangle', dur: 1.0, atk: 0.45, gain: 0.09, to: A.mf(P5[i % 8]), lp: 2500, rev: 0.5 }) });
+      s2.push({ t: 2 + 2 * i, fn: () => { A.bell(P5[(i + 1) % 5]); A.pluck(P5[(i + 1) % 5] - 12, { gain: 0.08 }); } });
+    }
+    const s3 = [];
+    for (let k = 0; k < 4; k++) {
+      s3.push({ t: 1.3 + 1.7 * k, fn: () => { for (let r = 0; r < 6; r++) A.pluck(P5[r], { t: r * 0.035, pan: (r / 5 - 0.5) * 1.2, gain: 0.06, dur: 0.6 }); } });
+    }
+    for (let k = 0; k < 5; k++) s3.push({ t: 1.7 * k, fn: () => A.hat(0.04) });
+    const s4 = [
+      { t: 0.4, fn: () => A.tone(A.mf(50), { dur: 4.8, atk: 1.2, gain: 0.1, to: A.mf(86), rev: 0.5 }) },
+      { t: 5.3, fn: () => { A.bell(62); A.bell(69, { t: 0.06 }); A.bell(74, { t: 0.12 }); A.bell(77, { t: 0.18 }); } },
+    ];
+    return [s0, s1, s2, s3, s4].map((c) => base.concat(c));
+  })();
+
+  const scenes = [sceneType(), sceneFlow(), sceneMorph(), sceneEase(), sceneDraw()];
+  const N = scenes.length;
+  const DUR = 7, TR = 0.9, TOTAL = N * DUR;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- Größe ---------- */
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    W = Math.max(1, Math.round(r.width));
+    H = Math.max(1, Math.round(r.height));
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(W * DPR);
+    cv.height = Math.round(H * DPR);
+    for (const s of scenes) {
+      s.cv.width = cv.width;
+      s.cv.height = cv.height;
+      s.g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    typeCache.clear();
+    for (const s of scenes) if (s.resize) s.resize();
+  }
+
+  /* ---------- Steuerung ---------- */
+  const chipsEl = $('#chips');
+  const capTitle = $('#cap-title'), capText = $('#cap-text');
+  const playBtn = $('#play'), icoPlay = $('#ico-play'), icoPause = $('#ico-pause');
+  let playing = !reduce;
+  let clock = reduce ? 5.6 : 0.55;
+  let inView = true;
+  let shown = -1;
+  let last = performance.now();
+  const wasVis = new Array(N).fill(false);
+  const lastT = new Array(N).fill(0);
+  let lastStep = -1;
+  const prog = new Array(N).fill(-1);
+  const snapCv = document.createElement('canvas');
+  let snap = false, snapT = 0;
+
+  const chipEls = scenes.map((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.textContent = s.label;
+    b.addEventListener('click', () => jump(i));
+    chipsEl.appendChild(b);
+    return b;
+  });
+
+  function setShown(k) {
+    shown = k;
+    if (soundOn && A.ready) A.setPad(k);
+    chipEls.forEach((b, i) => {
+      b.classList.toggle('on', i === k);
+      if (i === k) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+    });
+    const s = scenes[k];
+    capTitle.textContent = s.title;
+    capText.textContent = typeof s.text === 'function' ? s.text() : s.text;
+  }
+
+  function syncPlayUi() {
+    icoPlay.hidden = playing;
+    icoPause.hidden = !playing;
+    playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Abspielen');
+    applyLevel();
+  }
+
+  function jump(i) {
+    if (!reduce) {
+      snapCv.width = cv.width;
+      snapCv.height = cv.height;
+      snapCv.getContext('2d').drawImage(cv, 0, 0);
+      snap = true;
+      snapT = 0;
+    }
+    if (soundOn && A.ready) A.whoosh(0.7, 0.1);
+    clock = i * DUR;
+  }
+
+  const sndBtn = $('#snd'), sndLabel = $('#snd-label');
+  let soundOn = false;
+  let lastTouchNote = 0;
+  function applyLevel() { A.level(soundOn && playing && inView && !document.hidden); }
+  sndBtn.addEventListener('click', () => {
+    soundOn = !soundOn;
+    if (soundOn) {
+      if (!A.init()) { soundOn = false; return; }
+      A.resume();
+      A.setPad(Math.max(shown, 0));
+    } else {
+      A.stopPad(0.3);
+    }
+    sndBtn.setAttribute('aria-pressed', String(soundOn));
+    sndBtn.setAttribute('aria-label', soundOn ? 'Ton ausschalten' : 'Ton einschalten');
+    sndLabel.textContent = soundOn ? 'Ton an' : 'Ton aus';
+    applyLevel();
+  });
+
+  playBtn.addEventListener('click', () => { playing = !playing; syncPlayUi(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) {
+      e.preventDefault();
+      playing = !playing;
+      syncPlayUi();
+    } else if (e.key === 'ArrowRight') {
+      jump((Math.max(shown, 0) + 1) % N);
+    } else if (e.key === 'ArrowLeft') {
+      jump((Math.max(shown, 0) - 1 + N) % N);
+    }
+  });
+
+  cv.addEventListener('pointermove', (e) => {
+    const r = cv.getBoundingClientRect();
+    pointer.x = e.clientX - r.left;
+    pointer.y = e.clientY - r.top;
+    pointer.active = true;
+    if (soundOn && playing && shown === 1 && A.ready && e.timeStamp - lastTouchNote > 170) {
+      lastTouchNote = e.timeStamp;
+      const i = clamp(Math.floor((pointer.x / W) * P5.length), 0, P5.length - 1);
+      A.pluck(P5[i] + (pointer.y < H / 2 ? 12 : 0), { pan: clamp((pointer.x / W) * 2 - 1, -1, 1) * 0.8, rev: 0.6, dur: 0.7 });
+    }
+  });
+  cv.addEventListener('pointerleave', () => { pointer.active = false; });
+
+  /* ---------- Schleife ---------- */
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const rdt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if (!inView) return;
+    const dt = playing ? rdt : 0;
+    clock = (((clock + dt) % TOTAL) + TOTAL) % TOTAL;
+
+    const cur = Math.floor(clock / DUR) % N;
+    const into = clock - cur * DUR;
+    const tr = into > DUR - TR;
+    const nxt = (cur + 1) % N;
+    const p = tr ? (into - (DUR - TR)) / TR : 0;
+    const tCur = into + TR, tNxt = into - DUR + TR;
+
+    for (let k = 0; k < N; k++) {
+      const v = k === cur || (tr && k === nxt);
+      if (v && !wasVis[k]) {
+        if (scenes[k].reset) scenes[k].reset();
+        const tk = k === cur ? tCur : tNxt;
+        lastT[k] = tk < TR * 0.5 ? -0.001 : tk - 0.0001;
+      }
+      wasVis[k] = v;
+    }
+    const stp = Math.floor(clock / 0.25);
+    if (stp !== lastStep) {
+      if (soundOn && dt > 0 && A.ready) { if (stp % 4 === 0) A.kick(); else if (stp % 4 === 2) A.hat(); }
+      lastStep = stp;
+    }
+    const fire = (k, t) => {
+      const a = lastT[k];
+      lastT[k] = t;
+      if (!soundOn || dt === 0 || !A.ready) return;
+      for (const c of cues[k]) if (c.t > a && c.t <= t) c.fn();
+    };
+    fire(cur, tCur);
+    if (tr) fire(nxt, tNxt);
+    scenes[cur].draw(tCur, dt);
+    if (tr) scenes[nxt].draw(tNxt, dt);
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.drawImage(scenes[cur].cv, 0, 0);
+    if (tr) {
+      const rad = E.inOutCubic(p) * (Math.hypot(cv.width, cv.height) / 2) * 1.02;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cv.width / 2, cv.height / 2, rad, 0, TAU);
+      ctx.clip();
+      ctx.drawImage(scenes[nxt].cv, 0, 0);
+      ctx.restore();
+      ctx.strokeStyle = rgb(PAL[nxt % PAL.length], (1 - p) * 0.9);
+      ctx.lineWidth = 3 * DPR;
+      ctx.beginPath();
+      ctx.arc(cv.width / 2, cv.height / 2, rad, 0, TAU);
+      ctx.stroke();
+    }
+    if (snap) {
+      snapT += rdt;
+      const a = 1 - snapT / 0.5;
+      if (a <= 0) snap = false;
+      else { ctx.globalAlpha = a; ctx.drawImage(snapCv, 0, 0); ctx.globalAlpha = 1; }
+    }
+
+    const sh = tr && p > 0.5 ? nxt : cur;
+    if (sh !== shown) setShown(sh);
+    for (let k = 0; k < N; k++) {
+      const v = k === sh && sh === cur ? Math.round(clamp(into / DUR) * 200) / 200 : 0;
+      if (v !== prog[k]) { prog[k] = v; chipEls[k].style.setProperty('--p', String(v)); }
+    }
+  }
+
+  let started = false;
+  function start() {
+    if (started) return;
+    started = true;
+    resize();
+    syncPlayUi();
+    setShown(0);
+    last = performance.now();
+    requestAnimationFrame(frame);
+  }
+
+  if ('ResizeObserver' in window) new ResizeObserver(() => { if (started) resize(); }).observe(stage);
+  else window.addEventListener('resize', () => { if (started) resize(); });
+  if ('IntersectionObserver' in window) new IntersectionObserver((es) => { inView = es[0].isIntersecting; applyLevel(); }).observe(stage);
+  document.addEventListener('visibilitychange', applyLevel);
+
+  const fontsReady = Promise.race([
+    Promise.all([
+      document.fonts.load('800 80px "Bricolage Grotesque"'),
+      document.fonts.load('400 12px "DM Mono"'),
+      document.fonts.load('500 12px "DM Mono"'),
+    ]),
+    new Promise((r) => setTimeout(r, 1800)),
+  ]);
+  fontsReady.then(start, start);
+})();
+</script>
+</body>
+</html>
